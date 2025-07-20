@@ -1,4 +1,4 @@
-# TWRP device tree for Galaxy A2 Core
+# TWRP device tree for Galaxy A2 Core Cool
 Add to ``.repo/local_manifests/a2corelte.xml``:
 
 ```
