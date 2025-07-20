@@ -72,6 +72,9 @@ TW_USE_TOOLBOX := true
 TW_MTP_DEVICE := "/dev/usb_mtp_gadget"
 TW_EXCLUDE_SUPERSU := true
 
+# USB configfs support for modern MTP
+TARGET_USES_USB_CONFIGFS := true
+
 # Color fix
 TARGET_RECOVERY_PIXEL_FORMAT := "ABGR_8888"
 

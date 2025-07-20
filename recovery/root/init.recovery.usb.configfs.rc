@@ -1,11 +1,90 @@
---2024-08-15 14:36:15--  https://raw.githubusercontent.com/Rabikishan001/a2corelte_dump/fe01b6c7f321e48d22fbee30027db0ed1be5e406/boot/ramdisk/init.usb.configfs.rc
-Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 185.199.110.133, 185.199.108.133, 185.199.111.133, ...
-Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|185.199.110.133|:443... connected.
-HTTP request sent, awaiting response... 200 OK
-Length: 7874 (7.7K) [text/plain]
-Saving to: ‘init.usb.configfs.rc.1’
+# USB configfs configuration for Samsung A2 Core recovery
+# This file configures USB gadget functionality using the modern configfs interface
 
-     0K .......                                               100% 1.58M=0.005s
+on init
+    mount configfs none /config
+    mkdir /config/usb_gadget/g1 0770 shell shell
+    write /config/usb_gadget/g1/idVendor 0x04E8
+    write /config/usb_gadget/g1/idProduct 0x6860
+    write /config/usb_gadget/g1/bcdDevice 0x0400
+    write /config/usb_gadget/g1/bcdUSB 0x0200
+    write /config/usb_gadget/g1/bDeviceClass 0
+    write /config/usb_gadget/g1/bDeviceSubClass 0
+    write /config/usb_gadget/g1/bDeviceProtocol 0
+    mkdir /config/usb_gadget/g1/strings/0x409
+    write /config/usb_gadget/g1/strings/0x409/serialnumber ${ro.serialno}
+    write /config/usb_gadget/g1/strings/0x409/manufacturer "Samsung"
+    write /config/usb_gadget/g1/strings/0x409/product "Galaxy A2 Core"
 
-2024-08-15 14:36:15 (1.58 MB/s) - ‘init.usb.configfs.rc.1’ saved [7874/7874]
+    # Create configuration
+    mkdir /config/usb_gadget/g1/configs/b.1
+    mkdir /config/usb_gadget/g1/configs/b.1/strings/0x409
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_adb"
+    write /config/usb_gadget/g1/configs/b.1/MaxPower 500
+    write /config/usb_gadget/g1/configs/b.1/bmAttributes 0x80
 
+    # Create MTP function
+    mkdir /config/usb_gadget/g1/functions/mtp.gs0
+
+    # Create ADB function  
+    mkdir /config/usb_gadget/g1/functions/ffs.adb
+
+    # Create mass storage function for fallback
+    mkdir /config/usb_gadget/g1/functions/mass_storage.0
+    write /config/usb_gadget/g1/functions/mass_storage.0/stall 0
+    write /config/usb_gadget/g1/functions/mass_storage.0/lun.0/cdrom 0
+    write /config/usb_gadget/g1/functions/mass_storage.0/lun.0/ro 0
+    write /config/usb_gadget/g1/functions/mass_storage.0/lun.0/nofua 0
+
+    # Set up ADB
+    mkdir /dev/usb-ffs 0770 shell shell
+    mkdir /dev/usb-ffs/adb 0770 shell shell
+    mount functionfs adb /dev/usb-ffs/adb uid=2000,gid=2000
+
+on property:sys.usb.config=none
+    write /config/usb_gadget/g1/UDC "none"
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/UDC "none"
+    rm /config/usb_gadget/g1/configs/b.1/mtp.gs0
+    rm /config/usb_gadget/g1/configs/b.1/mass_storage.0
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/ffs.adb
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mtp && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/UDC "none"
+    rm /config/usb_gadget/g1/configs/b.1/ffs.adb
+    rm /config/usb_gadget/g1/configs/b.1/mass_storage.0
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/mtp.gs0
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mtp,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/UDC "none"
+    rm /config/usb_gadget/g1/configs/b.1/mass_storage.0
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/mtp.gs0
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/ffs.adb
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mass_storage && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/UDC "none"
+    rm /config/usb_gadget/g1/configs/b.1/ffs.adb
+    rm /config/usb_gadget/g1/configs/b.1/mtp.gs0
+    symlink /config/usb_gadget/g1/functions/mass_storage.0 /config/usb_gadget/g1/configs/b.1/mass_storage.0
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mass_storage,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/UDC "none"
+    rm /config/usb_gadget/g1/configs/b.1/mtp.gs0
+    symlink /config/usb_gadget/g1/functions/mass_storage.0 /config/usb_gadget/g1/configs/b.1/mass_storage.0
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/ffs.adb
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on boot
+    setprop sys.usb.configfs 1
+    setprop sys.usb.controller "13600000.dwc3"
